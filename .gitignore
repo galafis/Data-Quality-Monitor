@@ -125,6 +125,7 @@ Thumbs.db
 *.jpg
 *.jpeg
 *.gif
+*.db
 data/
 models/
 logs/

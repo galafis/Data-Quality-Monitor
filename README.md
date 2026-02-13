@@ -1,192 +1,226 @@
-# 📊 Data Quality Monitor
+# Data-Quality-Monitor
 
-> Professional project by Gabriel Demetrios Lafis
-
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg)](https://img.shields.io/badge/)
-[![Flask](https://img.shields.io/badge/Flask-3.0-000000.svg)](https://img.shields.io/badge/)
-[![NumPy](https://img.shields.io/badge/NumPy-1.26-013243.svg)](https://img.shields.io/badge/)
-[![Pandas](https://img.shields.io/badge/Pandas-2.2-150458.svg)](https://img.shields.io/badge/)
+[![Python](https://img.shields.io/badge/Python-3.8+-3776AB.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-2.0+-000000.svg)](https://flask.palletsprojects.com/)
+[![Pandas](https://img.shields.io/badge/Pandas-1.3+-150458.svg)](https://pandas.pydata.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[English](#english) | [Português](#português)
+[Portugues](#portugues) | [English](#english)
+
+---
+
+## Portugues
+
+### Descricao
+
+Monitor de qualidade de dados com regras de validacao configuraveis, dashboard web Flask e relatorios de qualidade para tabelas SQLite.
+
+### Funcionalidades
+
+- **Verificacao de nulos**: Detecta e reporta percentual de valores nulos por coluna
+- **Validacao de formato**: Valida dados contra expressoes regulares configuraveis (e-mail, telefone, etc.)
+- **Verificacao de intervalo**: Checa se valores numericos estao dentro de limites definidos
+- **Verificacao de unicidade**: Identifica duplicatas em colunas que devem ser unicas
+- **Integridade referencial**: Verifica chaves estrangeiras entre tabelas
+- **Perfilamento de dados**: Gera estatisticas descritivas por coluna (contagem, nulos, unicos, min, max, media, desvio padrao)
+- **Dashboard web**: Interface HTML inline servida pelo Flask com visualizacao de metricas, tendencias (Chart.js) e resultados
+- **Armazenamento de resultados**: Historico de verificacoes salvo em SQLite para analise de tendencias
+
+### O que este projeto NAO possui
+
+- Processamento paralelo
+- Configuracao via YAML/JSON externo
+- Pipeline ETL
+- Cache
+- Middleware pipeline
+- Camada de documentacao de API
+- Containerizacao
+- CI/CD funcional
+- Testes completos (apenas scaffold)
+
+### Arquitetura
+
+```mermaid
+graph TB
+    subgraph FlaskApp["Flask Web Dashboard"]
+        R1["GET / — Dashboard HTML"]
+        R2["GET /quality-summary"]
+        R3["POST /run-checks"]
+        R4["GET /profile/table_name"]
+    end
+
+    subgraph DQM["DataQualityMonitor"]
+        RM["Gerenciamento de Regras"]
+        CE["Motor de Execucao de Verificacoes"]
+        DP["Perfilamento de Dados"]
+        RS["Armazenamento de Resultados"]
+    end
+
+    subgraph DB["SQLite DB"]
+        T1["quality_rules"]
+        T2["quality_results"]
+        T3["customers / products / orders"]
+    end
+
+    R1 -->|HTML inline| Navegador
+    R2 --> CE
+    R3 --> CE
+    R4 --> DP
+    RM --> T1
+    CE --> T1
+    CE --> T2
+    CE --> T3
+    DP --> T3
+    RS --> T2
+
+    style FlaskApp fill:#e1f5fe
+    style DQM fill:#f3e5f5
+    style DB fill:#fff3e0
+```
+
+### Stack Tecnologica
+
+| Tecnologia | Descricao | Papel |
+|------------|-----------|-------|
+| **Python** | Linguagem principal | Core |
+| **Flask** | Framework web leve | Servidor e rotas |
+| **pandas** | Manipulacao de dados | Consultas e agregacoes |
+| **SQLite** | Banco de dados embutido | Armazenamento |
+
+### Inicio Rapido
+
+```bash
+# Clonar o repositorio
+git clone https://github.com/galafis/Data-Quality-Monitor.git
+cd Data-Quality-Monitor
+
+# Criar e ativar ambiente virtual
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Executar a aplicacao
+python quality_monitor.py
+```
+
+Acesse `http://localhost:5000` no navegador para visualizar o dashboard.
+
+O dashboard HTML e servido inline (sem arquivos de template separados). Ele inclui tres abas: Dashboard (metricas e tendencias), Verificacoes de Qualidade (executar e visualizar resultados) e Perfilamento de Dados (estatisticas por tabela).
+
+### Testes
+
+O diretorio `tests/` contem apenas um scaffold basico. Testes unitarios completos ainda nao foram implementados.
+
+```bash
+pytest tests/ -v
+```
+
+### Estrutura do Projeto
+
+```
+Data-Quality-Monitor/
+├── quality_monitor.py   # Aplicacao principal (classe + Flask + HTML)
+├── requirements.txt     # Dependencias Python
+├── tests/               # Scaffold de testes
+│   ├── __init__.py
+│   └── test_main.py
+├── LICENSE
+└── README.md
+```
+
+### Autor
+
+**Gabriel Demetrios Lafis**
+- GitHub: [@galafis](https://github.com/galafis)
+- LinkedIn: [Gabriel Demetrios Lafis](https://linkedin.com/in/gabriel-demetrios-lafis)
+
+### Licenca
+
+Este projeto esta licenciado sob a Licenca MIT — veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
 ## English
 
-### 🎯 Overview
+### Description
 
-**Data Quality Monitor** is a production-grade Python application that showcases modern software engineering practices including clean architecture, comprehensive testing, containerized deployment, and CI/CD readiness.
+Data quality monitor with configurable validation rules, Flask web dashboard, and quality reports for SQLite tables.
 
-The codebase comprises **1,091 lines** of source code organized across **1 modules**, following industry best practices for maintainability, scalability, and code quality.
+### Features
 
-### ✨ Key Features
+- **Null checks**: Detects and reports null value percentage per column
+- **Format validation**: Validates data against configurable regular expressions (email, phone, etc.)
+- **Range checks**: Verifies numeric values fall within defined bounds
+- **Uniqueness checks**: Identifies duplicates in columns that should be unique
+- **Foreign key integrity**: Validates referential integrity between tables
+- **Data profiling**: Generates descriptive statistics per column (count, nulls, uniques, min, max, mean, std dev)
+- **Web dashboard**: Inline HTML interface served by Flask with metrics visualization, trends (Chart.js), and results
+- **Result storage**: Check history saved in SQLite for trend analysis
 
-- **🔄 Data Pipeline**: Scalable ETL with parallel processing
-- **✅ Data Validation**: Schema validation and quality checks
-- **📊 Monitoring**: Pipeline health metrics and alerting
-- **🔧 Configurability**: YAML/JSON-based pipeline configuration
-- **🏗️ Object-Oriented**: 1 core classes with clean architecture
+### What this project does NOT have
 
-### 🏗️ Architecture
+- Parallel processing
+- External YAML/JSON configuration
+- ETL pipeline
+- Cache
+- Middleware pipeline
+- API documentation layer
+- Containerization
+- Functional CI/CD
+- Complete tests (scaffold only)
+
+### Architecture
 
 ```mermaid
 graph TB
-    subgraph Client["🖥️ Client Layer"]
-        A[Web Client]
-        B[API Documentation]
+    subgraph FlaskApp["Flask Web Dashboard"]
+        R1["GET / — Dashboard HTML"]
+        R2["GET /quality-summary"]
+        R3["POST /run-checks"]
+        R4["GET /profile/table_name"]
     end
-    
-    subgraph API["⚡ API Layer"]
-        C[Middleware Pipeline]
-        D[Route Handlers]
-        E[Business Logic]
+
+    subgraph DQM["DataQualityMonitor"]
+        RM["Rule Management"]
+        CE["Check Execution Engine"]
+        DP["Data Profiling"]
+        RS["Result Storage"]
     end
-    
-    subgraph Data["💾 Data Layer"]
-        F[(Primary Database)]
-        G[Cache]
+
+    subgraph DB["SQLite DB"]
+        T1["quality_rules"]
+        T2["quality_results"]
+        T3["customers / products / orders"]
     end
-    
-    A --> C
-    B --> C
-    C --> D --> E
-    E --> F
-    E --> G
-    
-    style Client fill:#e1f5fe
-    style API fill:#f3e5f5
-    style Data fill:#fff3e0
+
+    R1 -->|inline HTML| Browser
+    R2 --> CE
+    R3 --> CE
+    R4 --> DP
+    RM --> T1
+    CE --> T1
+    CE --> T2
+    CE --> T3
+    DP --> T3
+    RS --> T2
+
+    style FlaskApp fill:#e1f5fe
+    style DQM fill:#f3e5f5
+    style DB fill:#fff3e0
 ```
 
-### 🚀 Quick Start
-
-#### Prerequisites
-
-- Python 3.12+
-- pip (Python package manager)
-
-#### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/galafis/Data-Quality-Monitor.git
-cd Data-Quality-Monitor
-
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-#### Running
-
-```bash
-# Run the application
-python src/main.py
-```
-
-### 📁 Project Structure
-
-```
-Data-Quality-Monitor/
-├── tests/         # Test suite
-│   ├── __init__.py
-│   └── test_main.py
-├── LICENSE
-├── README.md
-├── quality_monitor.py
-└── requirements.txt
-```
-
-### 🛠️ Tech Stack
+### Tech Stack
 
 | Technology | Description | Role |
 |------------|-------------|------|
-| **Python** | Core Language | Primary |
-| **Flask** | Lightweight web framework | Framework |
-| **NumPy** | Numerical computing | Framework |
-| **Pandas** | Data manipulation library | Framework |
+| **Python** | Core language | Core |
+| **Flask** | Lightweight web framework | Server and routing |
+| **pandas** | Data manipulation | Queries and aggregation |
+| **SQLite** | Embedded database | Storage |
 
-### 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### 👤 Author
-
-**Gabriel Demetrios Lafis**
-- GitHub: [@galafis](https://github.com/galafis)
-- LinkedIn: [Gabriel Demetrios Lafis](https://linkedin.com/in/gabriel-demetrios-lafis)
-
----
-
-## Português
-
-### 🎯 Visão Geral
-
-**Data Quality Monitor** é uma aplicação Python de nível profissional que demonstra práticas modernas de engenharia de software, incluindo arquitetura limpa, testes abrangentes, implantação containerizada e prontidão para CI/CD.
-
-A base de código compreende **1,091 linhas** de código-fonte organizadas em **1 módulos**, seguindo as melhores práticas do setor para manutenibilidade, escalabilidade e qualidade de código.
-
-### ✨ Funcionalidades Principais
-
-- **🔄 Data Pipeline**: Scalable ETL with parallel processing
-- **✅ Data Validation**: Schema validation and quality checks
-- **📊 Monitoring**: Pipeline health metrics and alerting
-- **🔧 Configurability**: YAML/JSON-based pipeline configuration
-- **🏗️ Object-Oriented**: 1 core classes with clean architecture
-
-### 🏗️ Arquitetura
-
-```mermaid
-graph TB
-    subgraph Client["🖥️ Client Layer"]
-        A[Web Client]
-        B[API Documentation]
-    end
-    
-    subgraph API["⚡ API Layer"]
-        C[Middleware Pipeline]
-        D[Route Handlers]
-        E[Business Logic]
-    end
-    
-    subgraph Data["💾 Data Layer"]
-        F[(Primary Database)]
-        G[Cache]
-    end
-    
-    A --> C
-    B --> C
-    C --> D --> E
-    E --> F
-    E --> G
-    
-    style Client fill:#e1f5fe
-    style API fill:#f3e5f5
-    style Data fill:#fff3e0
-```
-
-### 🚀 Início Rápido
-
-#### Prerequisites
-
-- Python 3.12+
-- pip (Python package manager)
-
-#### Installation
+### Quick Start
 
 ```bash
 # Clone the repository
@@ -195,51 +229,46 @@ cd Data-Quality-Monitor
 
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Run the application
+python quality_monitor.py
 ```
 
-#### Running
+Open `http://localhost:5000` in your browser to view the dashboard.
+
+The HTML dashboard is served inline (no separate template files). It includes three tabs: Dashboard (metrics and trends), Quality Checks (run and view results), and Data Profiling (per-table statistics).
+
+### Tests
+
+The `tests/` directory contains only a basic scaffold. Full unit tests have not been implemented yet.
 
 ```bash
-# Run the application
-python src/main.py
+pytest tests/ -v
 ```
 
-### 📁 Estrutura do Projeto
+### Project Structure
 
 ```
 Data-Quality-Monitor/
-├── tests/         # Test suite
+├── quality_monitor.py   # Main application (class + Flask + HTML)
+├── requirements.txt     # Python dependencies
+├── tests/               # Test scaffold
 │   ├── __init__.py
 │   └── test_main.py
 ├── LICENSE
-├── README.md
-├── quality_monitor.py
-└── requirements.txt
+└── README.md
 ```
 
-### 🛠️ Stack Tecnológica
-
-| Tecnologia | Descrição | Papel |
-|------------|-----------|-------|
-| **Python** | Core Language | Primary |
-| **Flask** | Lightweight web framework | Framework |
-| **NumPy** | Numerical computing | Framework |
-| **Pandas** | Data manipulation library | Framework |
-
-### 🤝 Contribuindo
-
-Contribuições são bem-vindas! Sinta-se à vontade para enviar um Pull Request.
-
-### 📄 Licença
-
-Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
-### 👤 Autor
+### Author
 
 **Gabriel Demetrios Lafis**
 - GitHub: [@galafis](https://github.com/galafis)
 - LinkedIn: [Gabriel Demetrios Lafis](https://linkedin.com/in/gabriel-demetrios-lafis)
+
+### License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
