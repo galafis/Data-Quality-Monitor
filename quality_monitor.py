@@ -5,7 +5,6 @@ Advanced data quality monitoring and validation system with automated checks and
 """
 
 import pandas as pd
-import numpy as np
 import sqlite3
 import json
 import os
@@ -256,69 +255,82 @@ class DataQualityMonitor:
         conn.commit()
         conn.close()
     
+    def _validate_table_name(self, table_name):
+        """Validate that table_name exists in the database to mitigate SQL injection."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        valid_tables = {row[0] for row in cursor.fetchall()}
+        conn.close()
+        if table_name not in valid_tables:
+            raise ValueError(f"Invalid table name: {table_name}")
+    
     def run_quality_checks(self):
         """Run all active quality checks."""
         conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Get active rules
-        cursor.execute("""
-            SELECT rule_id, table_name, column_name, rule_type, rule_config, threshold_value
-            FROM quality_rules
-            WHERE is_active = 1
-        """)
-        
-        rules = cursor.fetchall()
-        results = []
-        
-        for rule in rules:
-            rule_id, table_name, column_name, rule_type, rule_config, threshold_value = rule
-            config = json.loads(rule_config) if rule_config else {}
+        try:
+            cursor = conn.cursor()
             
-            try:
-                if rule_type == 'null_check':
-                    result = self._check_nulls(table_name, column_name, threshold_value)
-                elif rule_type == 'format_check':
-                    result = self._check_format(table_name, column_name, config.get('pattern'), threshold_value)
-                elif rule_type == 'range_check':
-                    result = self._check_range(table_name, column_name, config.get('min'), config.get('max'), threshold_value)
-                elif rule_type == 'uniqueness_check':
-                    result = self._check_uniqueness(table_name, column_name, threshold_value)
-                elif rule_type == 'foreign_key_check':
-                    result = self._check_foreign_key(table_name, column_name, config.get('reference_table'), config.get('reference_column'), threshold_value)
-                else:
-                    continue
+            # Get active rules
+            cursor.execute("""
+                SELECT rule_id, table_name, column_name, rule_type, rule_config, threshold_value
+                FROM quality_rules
+                WHERE is_active = 1
+            """)
+            
+            rules = cursor.fetchall()
+            results = []
+            
+            for rule in rules:
+                rule_id, table_name, column_name, rule_type, rule_config, threshold_value = rule
+                config = json.loads(rule_config) if rule_config else {}
                 
-                # Store result
-                cursor.execute("""
-                    INSERT INTO quality_results (rule_id, table_name, column_name, check_date, metric_value, threshold_value, status, details)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (rule_id, table_name, column_name, datetime.now(), result['metric_value'], threshold_value, result['status'], result['details']))
-                
-                results.append({
-                    'rule_id': rule_id,
-                    'table_name': table_name,
-                    'column_name': column_name,
-                    'rule_type': rule_type,
-                    'metric_value': result['metric_value'],
-                    'threshold_value': threshold_value,
-                    'status': result['status'],
-                    'details': result['details']
-                })
-                
-            except Exception as e:
-                cursor.execute("""
-                    INSERT INTO quality_results (rule_id, table_name, column_name, check_date, metric_value, threshold_value, status, details)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (rule_id, table_name, column_name, datetime.now(), 0, threshold_value, 'ERROR', str(e)))
-        
-        conn.commit()
-        conn.close()
+                try:
+                    if rule_type == 'null_check':
+                        result = self._check_nulls(table_name, column_name, threshold_value)
+                    elif rule_type == 'format_check':
+                        result = self._check_format(table_name, column_name, config.get('pattern'), threshold_value)
+                    elif rule_type == 'range_check':
+                        result = self._check_range(table_name, column_name, config.get('min'), config.get('max'), threshold_value)
+                    elif rule_type == 'uniqueness_check':
+                        result = self._check_uniqueness(table_name, column_name, threshold_value)
+                    elif rule_type == 'foreign_key_check':
+                        result = self._check_foreign_key(table_name, column_name, config.get('reference_table'), config.get('reference_column'), threshold_value)
+                    else:
+                        continue
+                    
+                    # Store result
+                    cursor.execute("""
+                        INSERT INTO quality_results (rule_id, table_name, column_name, check_date, metric_value, threshold_value, status, details)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (rule_id, table_name, column_name, datetime.now(), result['metric_value'], threshold_value, result['status'], result['details']))
+                    
+                    results.append({
+                        'rule_id': rule_id,
+                        'table_name': table_name,
+                        'column_name': column_name,
+                        'rule_type': rule_type,
+                        'metric_value': result['metric_value'],
+                        'threshold_value': threshold_value,
+                        'status': result['status'],
+                        'details': result['details']
+                    })
+                    
+                except Exception as e:
+                    cursor.execute("""
+                        INSERT INTO quality_results (rule_id, table_name, column_name, check_date, metric_value, threshold_value, status, details)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (rule_id, table_name, column_name, datetime.now(), 0, threshold_value, 'ERROR', str(e)))
+            
+            conn.commit()
+        finally:
+            conn.close()
         
         return results
     
     def _check_nulls(self, table_name, column_name, threshold):
         """Check null percentage."""
+        self._validate_table_name(table_name)
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -341,6 +353,7 @@ class DataQualityMonitor:
     
     def _check_format(self, table_name, column_name, pattern, threshold):
         """Check format compliance."""
+        self._validate_table_name(table_name)
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -368,6 +381,7 @@ class DataQualityMonitor:
     
     def _check_range(self, table_name, column_name, min_val, max_val, threshold):
         """Check value range compliance."""
+        self._validate_table_name(table_name)
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -398,6 +412,7 @@ class DataQualityMonitor:
     
     def _check_uniqueness(self, table_name, column_name, threshold):
         """Check uniqueness constraint."""
+        self._validate_table_name(table_name)
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -421,6 +436,8 @@ class DataQualityMonitor:
     
     def _check_foreign_key(self, table_name, column_name, ref_table, ref_column, threshold):
         """Check foreign key integrity."""
+        self._validate_table_name(table_name)
+        self._validate_table_name(ref_table)
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -506,6 +523,7 @@ class DataQualityMonitor:
     
     def profile_data(self, table_name):
         """Profile data for a specific table."""
+        self._validate_table_name(table_name)
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
@@ -567,7 +585,7 @@ class DataQualityMonitor:
         conn.close()
         return profiles
 
-monitor = DataQualityMonitor()
+monitor = None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -1059,22 +1077,34 @@ def index():
 @app.route('/quality-summary')
 def get_quality_summary():
     """Get quality summary and trends."""
-    return jsonify(monitor.get_quality_summary())
+    try:
+        return jsonify(monitor.get_quality_summary())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/run-checks', methods=['POST'])
 def run_checks():
     """Run all quality checks."""
-    results = monitor.run_quality_checks()
-    return jsonify(results)
+    try:
+        results = monitor.run_quality_checks()
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/profile/<table_name>')
 def profile_table(table_name):
     """Profile a specific table."""
-    profiles = monitor.profile_data(table_name)
-    return jsonify(profiles)
+    try:
+        profiles = monitor.profile_data(table_name)
+        return jsonify(profiles)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 def main():
     """Main execution function."""
+    global monitor
+    monitor = DataQualityMonitor()
+    
     print("Data Quality Monitor")
     print("=" * 30)
     
@@ -1084,7 +1114,7 @@ def main():
     print("Starting web server...")
     print("Open http://localhost:5000 in your browser")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)
 
 if __name__ == "__main__":
     main()
